@@ -1,0 +1,29 @@
+{
+  "frames": 68,
+  "start_frame": 40,
+  "end_frame": 107,
+  "duration_s": 7.015837,
+  "max_pts_error_us": 0,
+  "source_rounding_error_ns": 496,
+  "verification": "Compared packet PTS and final duration in both exported MP4 files; fully decoded both.",
+  "last_duration": "median inter-frame duration",
+  "mean_supported_background": 0.5785957352941177,
+  "mean_diffusion_seconds_per_frame": 0.17687976964781923,
+  "timing_scope": "CPU diffusion and full-resolution composite preparation only; excludes geometry and video encoding",
+  "model_steps": 5,
+  "virtual_eye_left_camera_xyz_m": [
+    0,
+    -4.7,
+    -9.2
+  ],
+  "pitch_degrees": 27,
+  "fitted_frames": [
+    0,
+    35
+  ],
+  "rendered_size": [
+    768,
+    432
+  ],
+  "training_steps": 480
+}

@@ -1,0 +1,4 @@
+-r ../requirements.txt
+-r ../../requirements.txt
+scipy>=1.10
+imageio-ffmpeg>=0.6

@@ -1,0 +1,26 @@
+{
+  "backbone": "dinov3_vits16_pretrain_lvd1689m-08c60483.pth",
+  "shared": [
+    1,
+    32,
+    96
+  ],
+  "actions": [
+    1,
+    2
+  ],
+  "video": [
+    1,
+    8,
+    3,
+    32,
+    64
+  ],
+  "finite_gradients": true,
+  "reference_head_parameters": [
+    3059036162,
+    1023043776
+  ],
+  "backbone_pretrained": true,
+  "trained_task_heads": false
+}

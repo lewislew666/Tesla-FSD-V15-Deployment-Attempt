@@ -1,0 +1,235 @@
+{
+  "lidar_endpoint_states": {
+    "unknown": 134004,
+    "free": 129556,
+    "occupied": 48252
+  },
+  "drive": "2011_09_26/2011_09_26_drive_0001_sync",
+  "depth_range_m": [
+    3,
+    40
+  ],
+  "lidar_pixels": 316427,
+  "matched": 253826,
+  "coverage": 0.8021629001317839,
+  "median_m": 0.28968007010526264,
+  "p95_m": 2.730707853720185,
+  "frames": [
+    {
+      "frame": 0,
+      "lidar_pixels": 17949,
+      "matched": 14317,
+      "lidar_endpoint_states": {
+        "unknown": 7892,
+        "free": 7057,
+        "occupied": 2931
+      },
+      "median_m": 0.27087055159632634,
+      "occupied": 5497
+    },
+    {
+      "frame": 6,
+      "lidar_pixels": 17613,
+      "matched": 14053,
+      "lidar_endpoint_states": {
+        "unknown": 7426,
+        "free": 7228,
+        "occupied": 2851
+      },
+      "median_m": 0.26648384581528894,
+      "occupied": 5517
+    },
+    {
+      "frame": 12,
+      "lidar_pixels": 17774,
+      "matched": 14308,
+      "lidar_endpoint_states": {
+        "unknown": 9535,
+        "free": 6596,
+        "occupied": 1643
+      },
+      "median_m": 0.25748623865449893,
+      "occupied": 6290
+    },
+    {
+      "frame": 18,
+      "lidar_pixels": 17556,
+      "matched": 14385,
+      "lidar_endpoint_states": {
+        "unknown": 6409,
+        "free": 7599,
+        "occupied": 3496
+      },
+      "median_m": 0.25229910058138927,
+      "occupied": 6731
+    },
+    {
+      "frame": 24,
+      "lidar_pixels": 17412,
+      "matched": 13560,
+      "lidar_endpoint_states": {
+        "unknown": 6625,
+        "free": 6854,
+        "occupied": 3923
+      },
+      "median_m": 0.28015534002578235,
+      "occupied": 6301
+    },
+    {
+      "frame": 30,
+      "lidar_pixels": 17671,
+      "matched": 14149,
+      "lidar_endpoint_states": {
+        "unknown": 7907,
+        "free": 6915,
+        "occupied": 2849
+      },
+      "median_m": 0.24603759440263673,
+      "occupied": 5935
+    },
+    {
+      "frame": 36,
+      "lidar_pixels": 17717,
+      "matched": 14018,
+      "lidar_endpoint_states": {
+        "unknown": 8105,
+        "free": 6946,
+        "occupied": 2666
+      },
+      "median_m": 0.2600854714105605,
+      "occupied": 6062
+    },
+    {
+      "frame": 42,
+      "lidar_pixels": 17756,
+      "matched": 13832,
+      "lidar_endpoint_states": {
+        "unknown": 7929,
+        "free": 6965,
+        "occupied": 2748
+      },
+      "median_m": 0.2814183800315675,
+      "occupied": 5121
+    },
+    {
+      "frame": 48,
+      "lidar_pixels": 17656,
+      "matched": 14479,
+      "lidar_endpoint_states": {
+        "unknown": 7770,
+        "free": 7221,
+        "occupied": 2254
+      },
+      "median_m": 0.27048138650960496,
+      "occupied": 4587
+    },
+    {
+      "frame": 54,
+      "lidar_pixels": 17767,
+      "matched": 14195,
+      "lidar_endpoint_states": {
+        "unknown": 7631,
+        "free": 7133,
+        "occupied": 2668
+      },
+      "median_m": 0.2638581959334001,
+      "occupied": 4828
+    },
+    {
+      "frame": 60,
+      "lidar_pixels": 17755,
+      "matched": 14102,
+      "lidar_endpoint_states": {
+        "unknown": 7675,
+        "free": 7132,
+        "occupied": 2291
+      },
+      "median_m": 0.2927954204492611,
+      "occupied": 4525
+    },
+    {
+      "frame": 66,
+      "lidar_pixels": 17555,
+      "matched": 13942,
+      "lidar_endpoint_states": {
+        "unknown": 7033,
+        "free": 7784,
+        "occupied": 2058
+      },
+      "median_m": 0.34687237908713797,
+      "occupied": 5256
+    },
+    {
+      "frame": 72,
+      "lidar_pixels": 17362,
+      "matched": 13714,
+      "lidar_endpoint_states": {
+        "unknown": 5505,
+        "free": 8190,
+        "occupied": 2952
+      },
+      "median_m": 0.3395272382414358,
+      "occupied": 5953
+    },
+    {
+      "frame": 78,
+      "lidar_pixels": 17525,
+      "matched": 14136,
+      "lidar_endpoint_states": {
+        "unknown": 8792,
+        "free": 6464,
+        "occupied": 1951
+      },
+      "median_m": 0.3088141863700109,
+      "occupied": 6122
+    },
+    {
+      "frame": 84,
+      "lidar_pixels": 17325,
+      "matched": 13875,
+      "lidar_endpoint_states": {
+        "unknown": 7370,
+        "free": 6970,
+        "occupied": 2807
+      },
+      "median_m": 0.32194490525351327,
+      "occupied": 5936
+    },
+    {
+      "frame": 90,
+      "lidar_pixels": 17224,
+      "matched": 14192,
+      "lidar_endpoint_states": {
+        "unknown": 5822,
+        "free": 7586,
+        "occupied": 3594
+      },
+      "median_m": 0.3358523069655446,
+      "occupied": 6007
+    },
+    {
+      "frame": 96,
+      "lidar_pixels": 17377,
+      "matched": 14197,
+      "lidar_endpoint_states": {
+        "unknown": 7325,
+        "free": 7300,
+        "occupied": 2447
+      },
+      "median_m": 0.32068140473557527,
+      "occupied": 5031
+    },
+    {
+      "frame": 102,
+      "lidar_pixels": 17433,
+      "matched": 14372,
+      "lidar_endpoint_states": {
+        "unknown": 7253,
+        "free": 7616,
+        "occupied": 2123
+      },
+      "median_m": 0.28666892503719277,
+      "occupied": 5047
+    }
+  ]
+}

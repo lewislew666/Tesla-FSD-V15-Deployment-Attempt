@@ -1,34 +1,45 @@
 # Tesla FSD V15 Reality View · ChaseView 第三人称视角独立复现尝试
 
-[English](README.md)
+[English](README.md) · [Tesla 官方演示](https://www.youtube.com/watch?v=eNBqkc7V1nU) · [ChaseView 与 KITTI 实拍同步视频](neural/chase/result/sync.mp4)
 
-![KITTI 实拍与同步跟车视图](media/chaseview.webp)
+车顶上方没有一台跟拍相机，屏幕里的车后路面从哪里来？Tesla 公开说明了驾驶和画面生成如何共用视觉特征。ChaseView 用一段真实行车录像研究其中的画面生成问题，并逐帧标出合成画面里哪些位置有真实观测支持。
 
-Tesla FSD V15 Reality View 是 ChaseView 的灵感来源。我们尝试依据公开技术描述，用双目视觉和扩散模型从实拍行车影像重建同步的第三人称视角。在公开实拍帧上验证共享视觉特征、驾驶分支和视频分支的连接方式。现已训练并附带一个小型固定抬高视角生成分支；驾驶分支仍处于接口验证阶段。[Tesla 官方演示](https://www.youtube.com/watch?v=eNBqkc7V1nU) · [技术说明原帖](https://x.com/elonmusk/status/2124458557525397780)
+## Tesla FSD V15 如何生成 Reality View
 
-## 与实拍同步的第三人称跟车视频
+1. **一段视觉历史分给两个模型。** 据马斯克的技术说明，Tesla 的通用视觉编码器（UVE）提供近期的一串视觉特征。约 30 亿参数的模型据此输出驾驶动作，另一个约 10 亿参数的条件均值流模型读取同一串特征，生成屏幕画面。两条分支在视觉特征处分开，画面分支可以直接利用感知信息。[马斯克技术原帖](https://x.com/elonmusk/status/2124458557525397780)
+2. **上一段生成画面也是输入。** 画面分支给上一次的 Reality View 加噪，再以近期 UVE 特征为条件去噪，生成当前视图。这样既有上一段画面的外观参考，也能纳入新观测。Tesla 官方演示展示了虚拟相机从车身上方跟随车辆的效果。[技术原帖](https://x.com/elonmusk/status/2124458557525397780) · [Tesla 官方视频](https://www.youtube.com/watch?v=eNBqkc7V1nU)
+3. **感知更新和屏幕播放各有节奏。** 据原帖，UVE 以 18 Hz 更新，画面模型每块生成 8 帧，以 36 fps 播放。一块覆盖约 222 毫秒，恰好对应四个 UVE 周期，生成计算分摊到这四个周期。36 fps 描述的是播放节奏，原帖还提到计算预算带来的延迟。[时序与算力说明](https://x.com/elonmusk/status/2124458557525397780)
 
-[播放跟车视角](neural/chase/result/chase.mp4) · [并排核对同刻实拍和观测范围](neural/chase/result/sync.mp4) · [逐帧时间戳](neural/chase/result/timing.csv) · [导出核验](neural/chase/result/metrics.json)
+## Tesla 未开源的部分，我们怎样替代
 
-虚拟镜头位于左前相机后方 9.2 米、上方 4.7 米，向下俯拍 27°。镜头刚性跟随实车的逐帧惯导位姿，银色轿车由程序绘制，作为自车位置和尺度的参照。前向相机没有拍到本车外观。
+公开描述给出了模块连接和输出节奏。本项目没有可用的 Tesla 权重、完整 UVE 结构或训练配方。仓库有两条实验路径：**小型双分支实验**验证公开描述中的连接方式，**独立训练的跟车渲染器**生成下方 KITTI 视频。
 
-为评估预训练视频渲染器，另导出同一机位的[模糊 RGB 控制视频](neural/chase/result/control-blur.mp4)，保留 68 个原始显示时刻和自车轮廓。这份文件可用于 Cosmos3-Nano-Sim-Transfer 的 blur 条件实验。第三方模型的推理质量与端到端时延尚待测试。[官方模型卡](https://huggingface.co/nvidia/Cosmos3-Nano-Sim-Transfer)
+| 环节 | 项目的替代选择 | 已验证的范围 |
+| --- | --- | --- |
+| 视觉编码 | 冻结 Meta DINOv3 ViT-S/16。双分支实验按相机和时间融合视觉 token；跟车渲染器将左相机特征的三个主成分投影到双目表面。 | 在 KITTI 实拍上提取并可视化预训练特征。[特征图](neural/kitti-dinov3/features.jpg) |
+| 驾驶与视频分支 | 共享特征接动作头和八帧视频头。参考规模约为 30.59 亿及 10.23 亿参数，仅统计参数量。 | 缩小模型输出两个动作值和八帧 RGB，梯度检查通过。动作头尚未训练。[接口记录](neural/kitti-dinov3/branches.json) |
+| 虚拟机位与三维几何 | 用 KITTI 双目和车辆位姿，把当前与历史观测投影到固定跟车机位。独立 occupancy 基线可导出 20 厘米体素；跟车渲染器直接读取投影表面与覆盖掩码。 | 每帧都能查看哪些像素有几何支持。[几何投影](neural/chase/scene.py) · [占用基线](baselines/stereo/README.md) |
+| 时序生成 | 将上一帧背景按位姿对齐并加噪，以几何引导图、覆盖掩码和 DINO 特征为条件，做五步 DDIM 更新，最后叠加程序绘制的自车。另有独立的固定抬高视角均值流实验。 | 跟车视频在本地逐帧离线生成，按 KITTI 时间戳播放。[跟车采样器](neural/chase/diffusion.py) · [均值流实验](neural/raised_view.py) |
 
-**视角重建与补画。** 使用 KITTI Raw 0001 的同步左右实拍、双目标定及 OXTS 位姿，在线式地向后查看最多 12 个隔帧历史关键帧。投影中做深度遮挡检查，将已经驶过的地面放回车旁和车尾。DINOv3 ViT-S/16 提供当前实拍图的视觉特征。在几何支持不足的位置，使用地面或远景投影、邻近纹理以及上一幅生成画面作为条件。按相邻相机位姿重新投影上一帧，加入高斯噪声，通过五步确定性 DDIM 更新补全当前视图，并保留有几何支持的高频细节。生成器为本项目训练的小型条件卷积网络；该方案加入了显式双目几何和惯导信息。
+## 效果对比
 
-**训练和显示。** 在 0–35 号帧上训练条件去噪器，目标为双目投影得到的实拍颜色。随机挖空区域用于训练补全，历史输入在训练时由平移和模糊近似。导出 40–107 号帧时使用实际前一幅生成结果。输入仅有前向双目，历史观测能够补充近场，未曾拍到的物体或遮挡区域缺乏独立真值。同步版右下角以蓝绿色标出有当前或历史双目表面支持的像素，以橙色标出补画或近似投影，以浅灰色标出自车模型。
+**Tesla 官方演示与 ChaseView 实拍重建。** 可以对照观察同一个现象：车辆向前行驶时，刚从前相机下缘消失的路面怎样出现在车旁和车后。Tesla 展示车端实时生成的上方虚拟视角；ChaseView 在一条 KITTI 路线上使用固定机位，位于左相机后方 9.2 米、上方 4.7 米。两段视频来自不同道路和相机系统，目前没有同场景 Tesla 输出或同步俯视实拍可供逐像素评测。[播放 Tesla Reality View](https://www.youtube.com/watch?v=eNBqkc7V1nU) · [播放 ChaseView 与同刻前视实拍](neural/chase/result/sync.mp4)
 
-**时序。** 两个 H.264 MP4 均使用原始相机时间戳决定每一帧的显示时刻。首帧为时间零点，容器时间基为微秒，最后一帧持续时间取片段间隔的中位数。导出后核对每个包的显示时间及末帧时长，并完整解码两份视频。播放以实车节奏呈现；计算耗时与播放时长是独立指标。
+[![跟车画面与同刻 KITTI 前视实拍](media/chaseview.webp)](neural/chase/result/sync.mp4)
 
-复现时使用官方完整同步序列和标定压缩包。设置 DINO 权重与官方源码目录的步骤见下文。脚本默认加载项目附带的扩散权重，追加 `--train` 可重新拟合。
+### 车后的路面有多少来自真实观测？
 
-```sh
-python -m pip install -r neural/chase/requirements.txt
-python neural/chase/render.py --drive 2011_09_26_drive_0001_sync.zip --calib 2011_09_26_calib.zip \
-  --checkpoint "$weights" --meta-repo vendor/dinov3 --cache cache-chase --out run-chase
-```
+[![同一帧的双目支持区域、投影后的 DINOv3 特征与最终跟车画面](media/stereo-support.webp)](media/stereo-support.mp4)
 
-## 实拍输入与生成画面
+沿着车道线看三栏。左栏仅在有当前或历史双目表面支持的位置显示引导图颜色，深色空隙表示缺少双目支持。中栏是投影后的 DINO 特征，颜色表示特征主成分。右栏是加入近似投影、学习补全和自车后的最终画面。68 帧中，平均 **57.9% 的背景像素**有双目表面支持。[完整对比视频](media/stereo-support.mp4) · [逐帧覆盖率](neural/chase/result/timing.csv)
+
+### 上一帧怎样参与下一帧去噪？
+
+[![同一时刻对齐的历史背景、实际加噪输入和五步去噪后的背景](media/history-denoising.webp)](media/history-denoising.mp4)
+
+左栏显示按位姿对齐的上一帧生成背景；首帧 040 使用几何引导图初始化。中栏是实际送进去噪器的带噪张量，为显示裁到 RGB 范围。右栏是五步更新并恢复细节后的背景，自车在这一步之后绘制。观察右侧围栏，可以看到驶过时部分纹理被拉伸。两条对比 MP4 都保留了 KITTI 的 68 个显示时间戳，全长 7.016 秒。[完整对比视频](media/history-denoising.mp4) · [采样代码](neural/chase/diffusion.py)
+
+## 定量对照：抬高机位的模型输出与双目投影参考
 
 ![左为 KITTI 实拍，中间为模型输出，右为训练方法使用的几何投影参考](neural/kitti-raised/sequence.gif)
 
@@ -56,17 +67,31 @@ python neural/raised_view.py --drive 2011_09_26_drive_0001_sync.zip --calib 2011
   --load-head neural/kitti-raised/raised-flow.pth
 ```
 
-## 公开信息与本项目的实现选择
+## 跟车视频的训练与重放
 
-| 环节 | 官方披露 | 本项目的独立选择与状态 |
-|---|---|---|
-| 感知 | 两个分支共享近期 UVE 特征 | 用 DINOv3 ViT 提取各视角 patch，冻结骨干，保留 2×4 空间网格，加入相机编号和时间位置，用 Transformer 融合。该融合器需训练。支持 Meta 原始 .pth 及 Hugging Face 格式权重。 |
-| 驾驶 | 约 3B 参数模型输出驾驶动作 | 参考配置约 30.59 亿参数，假设输出两个连续控制量。尚无动作标签训练或实车控制接口。 |
-| 画面 | 约 1B 条件均值流模型读取同一组特征，给上次生成结果加噪并生成新画面 | 参考配置约 10.23 亿参数。独立选择 RGB patch Transformer、整块历史回馈、加性高斯噪声、零值冷启动、线性训练路径和单步更新。实现了均值流损失及时间导数，层数、宽度和损失配方属于项目假设。[MeanFlow 论文](https://proceedings.neurips.cc/paper_files/paper/2025/hash/6d13e085b79d454da5910e4ca82a3d9d-Abstract-Conference.html) |
-| 时间与计算 | UVE 为 18 Hz，生成八帧短块，36 fps 播放，生成计算跨四个 UVE 周期 | 代码每块输出八帧。本机测试使用缩小模型；参考配置仅统计参数。18 Hz 输入调度、36 fps 实时吞吐和车端芯片预算均待验证。 |
-| 视点 | 虚拟机位在本车上方 | 目前 KITTI 前向双目只提供街面视点，缺乏同刻俯视真值。训练俯视生成需要另行取得目标视点监督；当前测试也未验证自由视点控制。 |
+[播放跟车视角](neural/chase/result/chase.mp4) · [并排核对同刻实拍和观测范围](neural/chase/result/sync.mp4) · [逐帧时间戳](neural/chase/result/timing.csv) · [导出核验](neural/chase/result/metrics.json)
+
+虚拟镜头位于左前相机后方 9.2 米、上方 4.7 米，向下俯拍 27°。镜头刚性跟随实车的逐帧惯导位姿，银色轿车由程序绘制，作为自车位置和尺度的参照。前向相机没有拍到本车外观。
+
+为评估预训练视频渲染器，另导出同一机位的[模糊 RGB 控制视频](neural/chase/result/control-blur.mp4)，保留 68 个原始显示时刻和自车轮廓。这份文件可用于 Cosmos3-Nano-Sim-Transfer 的 blur 条件实验。第三方模型的推理质量与端到端时延尚待测试。[官方模型卡](https://huggingface.co/nvidia/Cosmos3-Nano-Sim-Transfer)
+
+**视角重建与补画。** 使用 KITTI Raw 0001 的同步左右实拍、双目标定及 OXTS 位姿，在线式地向后查看最多 12 个隔帧历史关键帧。投影中做深度遮挡检查，将已经驶过的地面放回车旁和车尾。DINOv3 ViT-S/16 提供当前实拍图的视觉特征。在几何支持不足的位置，使用地面或远景投影、邻近纹理以及上一幅生成画面作为条件。按相邻相机位姿重新投影上一帧，加入高斯噪声，通过五步确定性 DDIM 更新补全当前视图，并保留有几何支持的高频细节。生成器为本项目训练的小型条件卷积网络；该方案加入了显式双目几何和惯导信息。
+
+**训练和显示。** 在 0–35 号帧上训练条件去噪器，目标为双目投影得到的实拍颜色。随机挖空区域用于训练补全，历史输入在训练时由平移和模糊近似。导出 40–107 号帧时使用实际前一幅生成结果。输入仅有前向双目，历史观测能够补充近场，未曾拍到的物体或遮挡区域缺乏独立真值。同步版右下角以蓝绿色标出有当前或历史双目表面支持的像素，以橙色标出补画或近似投影，以浅灰色标出自车模型。
+
+**时序。** 两个 H.264 MP4 均使用原始相机时间戳决定每一帧的显示时刻。首帧为时间零点，容器时间基为微秒，最后一帧持续时间取片段间隔的中位数。导出后核对每个包的显示时间及末帧时长，并完整解码两份视频。播放以实车节奏呈现；开发用 Mac 的 CPU 上，扩散与全分辨率合成准备平均约 **177 毫秒/帧**，几何计算与编码另计。
+
+复现时使用官方完整同步序列和标定压缩包。设置 DINO 权重与官方源码目录的步骤见下文。脚本默认加载项目附带的扩散权重，追加 `--train` 可重新拟合。
+
+```sh
+python -m pip install -r neural/chase/requirements.txt
+python neural/chase/render.py --drive 2011_09_26_drive_0001_sync.zip --calib 2011_09_26_calib.zip \
+  --checkpoint "$weights" --meta-repo vendor/dinov3 --cache cache-chase --out run-chase
+```
 
 ## 在真实图像上复现接口检查
+
+双分支实验中的八帧视频头采用 RGB patch Transformer、带噪历史块、零值冷启动、线性训练路径和单步更新。这些是独立实现假设。均值流损失包含时间导数。18 Hz 调度、36 fps 车端吞吐与自由视点控制仍待验证。[MeanFlow 论文](https://proceedings.neurips.cc/paper_files/paper/2025/hash/6d13e085b79d454da5910e4ca82a3d9d-Abstract-Conference.html)
 
 下载 KITTI Raw 的[校正同步序列](https://s3.eu-central-1.amazonaws.com/avg-kitti/raw_data/2011_09_26_drive_0001/2011_09_26_drive_0001_sync.zip)和[同日标定](https://s3.eu-central-1.amazonaws.com/avg-kitti/raw_data/2011_09_26_calib.zip)。脚本直接读取原始 ZIP。
 

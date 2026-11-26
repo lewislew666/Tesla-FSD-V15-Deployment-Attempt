@@ -1,16 +1,49 @@
 # Tesla FSD V15 Reality View — An Independent Recreation Attempt with ChaseView
 
-Tesla FSD V15 Reality View inspired ChaseView, an independent attempt to recreate its third-person perspective from real driving footage using stereo vision and diffusion. ChaseView turns real KITTI stereo footage into a synchronized chase-camera video using vehicle motion, DINOv3 features and conditional diffusion.
+[中文说明](README.zh-CN.md) · [Tesla's official demo](https://www.youtube.com/watch?v=eNBqkc7V1nU) · [ChaseView on real KITTI footage](neural/chase/result/sync.mp4)
 
-![A virtual chase camera follows a car along a real KITTI street. The inset shows the front camera at the same moment.](media/chaseview.webp)
+How can a car show the road behind it from a camera that sits above its roof? Tesla described how its driving network and its Reality View renderer share visual features. ChaseView explores the rendering side on a recorded drive, where we can trace which parts of the virtual view have support from real camera observations.
 
-[Watch the full clip](neural/chase/result/chase.mp4) · [Compare against the synchronized front camera](neural/chase/result/sync.mp4) · [中文说明](README.zh-CN.md)
+## How Tesla describes FSD V15 Reality View
 
-## Where the car has just been
+1. **One visual history feeds two branches.** Tesla's Universal Vision Encoder (UVE) supplies a recent sequence of features. According to Elon Musk, a roughly 3B-parameter model uses those features to produce driving actions. A separate roughly 1B-parameter conditional mean-flow model reads the same features to render the display. The visualization branches from perception, before the action output. [Musk's technical description](https://x.com/elonmusk/status/2124458557525397780)
+2. **The renderer also reads its own previous output.** It adds noise to the previous Reality View generation, then uses the recent UVE features to denoise toward the current view. The official demo shows the resulting view from a virtual camera above the vehicle. [Technical description](https://x.com/elonmusk/status/2124458557525397780) · [Tesla video](https://www.youtube.com/watch?v=eNBqkc7V1nU)
+3. **The encoder and display run on different clocks.** Musk reports 18 Hz UVE updates and eight generated images per chunk at 36 fps. Eight frames span about 222 ms of playback, the same duration as four UVE cycles. Generation is spread over those four cycles. The 36 fps figure describes display cadence. [Timing and compute details](https://x.com/elonmusk/status/2124458557525397780)
 
-When a lane marking disappears beneath the front camera, a chase camera should still see it behind the car. ChaseView uses vehicle poses to place earlier stereo observations into the current view. That supplies actual road texture under and around the illustrated car. A five-step diffusion renderer fills gaps using the projected scene, visual features and the previous output warped into the new camera pose.
+## What ChaseView uses in place of Tesla's components
 
-The demonstration follows **68 frames over 7.016 seconds** from KITTI Raw drive 0001. The front-camera exposure times determine the presentation timestamps in both MP4s. The [coverage overlay](neural/chase/result/sync.mp4) shows which pixels have geometric support. On average, **57.9% of background pixels** have current or historical stereo support; the rest use approximate projection and completion. The silver sedan is a procedural model.
+The public description gives the branch connections and timing. We have no Tesla checkpoint, UVE specification or training recipe for this implementation. The repository contains **a small two-branch architecture experiment** and **a separately trained renderer that produced the chase videos**.
+
+| Component | Independent implementation | What we verified |
+| --- | --- | --- |
+| Visual encoder | Frozen Meta DINOv3 ViT-S/16. The architecture experiment fuses camera and time-indexed tokens. The chase renderer projects three principal components of left-camera features onto stereo surfaces. | Pretrained features on KITTI stereo images. [Feature visualization](neural/kitti-dinov3/features.jpg) |
+| Driving and video branches | A shared feature tensor feeds an action head and an eight-frame video head. Both full-size configurations are parameter counts only. | The small interface test emitted two action values and eight RGB frames, with finite gradients. The action head is untrained. [Test record](neural/kitti-dinov3/branches.json) |
+| Virtual camera and geometry | KITTI stereo and vehicle poses place current and past road observations under a fixed chase camera. The separate occupancy baseline exports 20 cm voxels. The chase renderer consumes projected surfaces and a coverage mask directly. | We can mark the supported pixels in every chase frame. [Projection code](neural/chase/scene.py) · [Occupancy baseline](baselines/stereo/README.md) |
+| Recurrent video generation | For the chase clip, we warp the previous background into the new pose, add noise, then run five conditional DDIM steps using the geometry guide, support mask and DINO features. A procedural sedan is composited last. A separate fixed-view experiment trains a small mean-flow head. | The chase video is rendered one frame at a time offline. Its timing comes from KITTI. [Chase sampler](neural/chase/diffusion.py) · [Mean-flow experiment](neural/raised_view.py) |
+
+## Visual comparisons
+
+**Tesla's demonstration and the KITTI result.** Watch how the road moves beneath the elevated camera. Tesla shows a real-time in-car visualization. ChaseView follows a fixed camera 9.2 m behind and 4.7 m above the left camera on one KITTI drive. The clips use different roads and camera systems. We have no paired Tesla output or recorded overhead target for a pixel-level comparison. [Watch Tesla Reality View](https://www.youtube.com/watch?v=eNBqkc7V1nU) · [Watch ChaseView with synchronized front camera](neural/chase/result/sync.mp4)
+
+[![ChaseView on KITTI with the recorded front-camera view inset](media/chaseview.webp)](neural/chase/result/sync.mp4)
+
+### Where does the road texture come from?
+
+[![Stereo-supported RGB, projected DINOv3 features and the final view of the same frame](media/stereo-support.webp)](media/stereo-support.mp4)
+
+Follow the lane marking as it passes under the car. Left shows the color guide only where current or earlier stereo observations support a surface. Dark gaps have no stereo support. Middle shows projected DINO feature colors. Right shows the final composite, including approximate projection and learned completion. On average, stereo supports **57.9% of background pixels** across the 68 frames. [Full comparison](media/stereo-support.mp4) · [Per-frame coverage](neural/chase/result/timing.csv)
+
+### What does the denoiser actually receive?
+
+[![Reprojected previous output, actual noisy input and denoised background at the same instant](media/history-denoising.webp)](media/history-denoising.mp4)
+
+Left shows the previous generated background aligned to the current pose. Frame 040 starts from the geometry guide. Middle shows the actual noisy tensor passed to the denoiser, clipped for RGB display. Right shows the background after five updates and the detail pass, before the car is added. Watch the right-hand fence for stretched texture as the car passes it. Both comparison MP4s preserve all 68 KITTI presentation timestamps over 7.016 seconds. [Full comparison](media/history-denoising.mp4) · [Sampler](neural/chase/diffusion.py)
+
+### How close is a learned view to the projected reference?
+
+[![Recorded front image, learned raised view and stereo reference in a separate fixed-camera experiment](neural/kitti-raised/sequence.gif)](neural/kitti-raised/sequence.gif)
+
+This separate experiment raises the camera by 1.5 m. Left is the recorded front image, middle is the learned view and right is the stereo projection used as a reference. On the same 16 held-out frames, the ground-plane RGB warp scored **16.51 dB** and the learned view **19.57 dB** PSNR over the **58.2%** of pixels with a valid reference. These scores apply only to this fixed-view experiment. [Metrics and frame IDs](neural/kitti-raised/metrics.json)
 
 ## Try it
 

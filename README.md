@@ -106,6 +106,8 @@ python neural/chase/render.py \
 
 Open `run-chase/sync.mp4` to inspect the rendering alongside the recorded input. Add `--train` to fit the included renderer again. Training uses frames 0–35; the published clip uses frames 40–107 of the same drive.
 
+To check synchronization on your own run, open `run-chase/timing.csv`. The first row has an MP4 presentation time of zero. Each later `mp4_pts_us` is the elapsed time since that first KITTI exposure, rounded to microseconds. The largest encoded timestamp mismatch is recorded as `max_pts_error_us` in `run-chase/metrics.json`.
+
 ## What the demo measures
 
 | Property | Result |

@@ -138,6 +138,8 @@ python neural/chase/render.py \
 
 打开 `run-chase/sync.mp4` 查看同步结果。脚本默认加载随仓库发布的去噪器，追加 `--train` 可重新拟合。
 
+复现后可用 `run-chase/timing.csv` 核对同步。第一帧的 MP4 显示时间为零，后续每一行的 `mp4_pts_us` 是相对首次 KITTI 曝光经过的时间，四舍五入到微秒。`run-chase/metrics.json` 中的 `max_pts_error_us` 记录编码后显示时间的最大偏差。
+
 ## 在真实图像上复现接口检查
 
 双分支实验中的八帧视频头采用 RGB patch Transformer、带噪历史块、零值冷启动、线性训练路径和单步更新。这些是独立实现假设。均值流损失包含时间导数。18 Hz 调度、36 fps 车端吞吐与自由视点控制仍待验证。[MeanFlow 论文](https://proceedings.neurips.cc/paper_files/paper/2025/hash/6d13e085b79d454da5910e4ca82a3d9d-Abstract-Conference.html)

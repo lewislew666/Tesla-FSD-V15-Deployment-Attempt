@@ -1,8 +1,10 @@
-# Tesla FSD V15 Reality View · ChaseView 第三人称视角独立复现尝试
+# Tesla FSD V15 Deployment Attempt（Tesla FSD V15 尝试部署）
 
-[English](README.md) · [Tesla 官方演示](https://www.youtube.com/watch?v=eNBqkc7V1nU) · [ChaseView 与 KITTI 实拍同步视频](neural/chase/result/sync.mp4)
+[English](README.md) · [Tesla 官方演示](https://www.youtube.com/watch?v=eNBqkc7V1nU) · [本项目与 KITTI 实拍同步视频](neural/chase/result/sync.mp4)
 
-车顶上方没有一台跟拍相机，屏幕里的车后路面从哪里来？Tesla 公开说明了驾驶和画面生成如何共用视觉特征。ChaseView 用一段真实行车录像研究其中的画面生成问题，并逐帧标出合成画面里哪些位置有真实观测支持。
+**独立研究项目。** 本项目尝试部署的范围是 Reality View 风格的离线可视化：用独立编写的代码和公开可获取的模型处理 KITTI 行车录像。项目与 Tesla 无隶属或合作关系，未使用 Tesla FSD 软件或权重。[版权与署名](#版权与署名)
+
+车顶上方没有一台跟拍相机，屏幕里的车后路面从哪里来？Tesla 公开说明了驾驶和画面生成如何共用视觉特征。本项目用一段真实行车录像研究其中的画面生成问题，并逐帧标出合成画面里哪些位置有真实观测支持。
 
 ## Tesla FSD V15 如何生成 Reality View
 
@@ -23,9 +25,9 @@
 
 ## 效果对比
 
-**Tesla 官方演示与 ChaseView 实拍重建。** 可以对照观察同一个现象：车辆向前行驶时，刚从前相机下缘消失的路面怎样出现在车旁和车后。Tesla 展示车端实时生成的上方虚拟视角；ChaseView 在一条 KITTI 路线上使用固定机位，位于左相机后方 9.2 米、上方 4.7 米。两段视频来自不同道路和相机系统，目前没有同场景 Tesla 输出或同步俯视实拍可供逐像素评测。[播放 Tesla Reality View](https://www.youtube.com/watch?v=eNBqkc7V1nU) · [播放 ChaseView 与同刻前视实拍](neural/chase/result/sync.mp4)
+**Tesla 官方演示与 本项目的实拍重建。** 可以对照观察同一个现象：车辆向前行驶时，刚从前相机下缘消失的路面怎样出现在车旁和车后。Tesla 展示车端实时生成的上方虚拟视角；我们的渲染器在一条 KITTI 路线上使用固定机位，位于左相机后方 9.2 米、上方 4.7 米。两段视频来自不同道路和相机系统，目前没有同场景 Tesla 输出或同步俯视实拍可供逐像素评测。[播放 Tesla Reality View](https://www.youtube.com/watch?v=eNBqkc7V1nU) · [播放本项目渲染与同刻前视实拍](neural/chase/result/sync.mp4)
 
-[![跟车画面与同刻 KITTI 前视实拍](media/chaseview.webp)](neural/chase/result/sync.mp4)
+[![跟车画面与同刻 KITTI 前视实拍](media/kitti-chase-camera.webp)](neural/chase/result/sync.mp4)
 
 ### 车后的路面有多少来自真实观测？
 
@@ -136,4 +138,8 @@ python -m pip install -r requirements.txt
 python baselines/stereo/kitti.py --drive 2011_09_26_drive_0001_sync.zip --calib 2011_09_26_calib.zip --out run-kitti
 ```
 
-KITTI Raw 图像与衍生预览、点云、占用结果遵循 [CC BY-NC-SA 3.0](https://creativecommons.org/licenses/by-nc-sa/3.0/)。数据来自 Andreas Geiger、Philip Lenz、Christoph Stiller、Raquel Urtasun，*Vision meets Robotics: The KITTI Dataset*，IJRR 2013。衍生修改包括双目测深、体素化、投影及动画排版。[数据集主页](https://www.cvlibs.net/datasets/kitti/raw_data.php) · [授权与引用](https://www.cvlibs.net/datasets/kitti/)
+## 版权与署名
+
+- **Tesla。** 文中使用 Tesla 及其产品名称来指明研究对象。Tesla 保留其商标和官方演示影像的相关权利，官方视频链接指向原始发布页。本项目由研究者独立实现，未经 Tesla 背书。[Tesla 知识产权说明](https://www.tesla.com/legal/additional-resources#intellectual-property) · [官方演示](https://www.youtube.com/watch?v=eNBqkc7V1nU)
+- **KITTI。** 实拍影像来自 Andreas Geiger、Philip Lenz、Christoph Stiller、Raquel Urtasun 的 *Vision meets Robotics: The KITTI Dataset*（IJRR，2013）。仓库中的 KITTI 图像及其衍生预览、视频、点云和占用栅格采用 CC BY-NC-SA 3.0。复用须署名、限非商业用途，分发改编作品时须沿用同一许可。本项目对影像进行了双目重建、视角投影、学习补全和合成。[数据集版权与引用](https://www.cvlibs.net/datasets/kitti/) · [许可全文](https://creativecommons.org/licenses/by-nc-sa/3.0/)
+- **DINOv3。** 实验使用 Meta 的预训练 DINOv3 ViT-S/16，适用 DINOv3 License。骨干权重由 Meta 提供，仓库内附的小型渲染器和视频头权重为本项目训练所得。[官方仓库](https://github.com/facebookresearch/dinov3) · [Meta 许可](https://github.com/facebookresearch/dinov3/blob/main/LICENSE.md)

@@ -1,8 +1,10 @@
-# Tesla FSD V15 Reality View — An Independent Recreation Attempt with ChaseView
+# Tesla FSD V15 Deployment Attempt
 
-[中文说明](README.zh-CN.md) · [Tesla's official demo](https://www.youtube.com/watch?v=eNBqkc7V1nU) · [ChaseView on real KITTI footage](neural/chase/result/sync.mp4)
+[中文说明](README.zh-CN.md) · [Tesla's official demo](https://www.youtube.com/watch?v=eNBqkc7V1nU) · [Our renderer on real KITTI footage](neural/chase/result/sync.mp4)
 
-How can a car show the road behind it from a camera that sits above its roof? Tesla described how its driving network and its Reality View renderer share visual features. ChaseView explores the rendering side on a recorded drive, where we can trace which parts of the virtual view have support from real camera observations.
+**Independent research project.** This deployment runs an offline recreation of the Reality View visualization on recorded KITTI footage. The implementation uses independently written code and publicly available models. The project is unaffiliated with Tesla and has no access to its FSD software or weights. [Copyright and attribution](#copyright-and-attribution)
+
+How can a car show the road behind it from a camera that sits above its roof? Tesla described how its driving network and its Reality View renderer share visual features. This project explores the rendering side on a recorded drive, where we can trace which parts of the virtual view have support from real camera observations.
 
 ## How Tesla describes FSD V15 Reality View
 
@@ -10,7 +12,7 @@ How can a car show the road behind it from a camera that sits above its roof? Te
 2. **The renderer also reads its own previous output.** It adds noise to the previous Reality View generation, then uses the recent UVE features to denoise toward the current view. The official demo shows the resulting view from a virtual camera above the vehicle. [Technical description](https://x.com/elonmusk/status/2124458557525397780) · [Tesla video](https://www.youtube.com/watch?v=eNBqkc7V1nU)
 3. **The encoder and display run on different clocks.** Musk reports 18 Hz UVE updates and eight generated images per chunk at 36 fps. Eight frames span about 222 ms of playback, the same duration as four UVE cycles. Generation is spread over those four cycles. The 36 fps figure describes display cadence. [Timing and compute details](https://x.com/elonmusk/status/2124458557525397780)
 
-## What ChaseView uses in place of Tesla's components
+## What this project uses in place of Tesla's components
 
 The public description gives the branch connections and timing. We have no Tesla checkpoint, UVE specification or training recipe for this implementation. The repository contains **a small two-branch architecture experiment** and **a separately trained renderer that produced the chase videos**.
 
@@ -23,9 +25,9 @@ The public description gives the branch connections and timing. We have no Tesla
 
 ## Visual comparisons
 
-**Tesla's demonstration and the KITTI result.** Watch how the road moves beneath the elevated camera. Tesla shows a real-time in-car visualization. ChaseView follows a fixed camera 9.2 m behind and 4.7 m above the left camera on one KITTI drive. The clips use different roads and camera systems. We have no paired Tesla output or recorded overhead target for a pixel-level comparison. [Watch Tesla Reality View](https://www.youtube.com/watch?v=eNBqkc7V1nU) · [Watch ChaseView with synchronized front camera](neural/chase/result/sync.mp4)
+**Tesla's demonstration and the KITTI result.** Watch how the road moves beneath the elevated camera. Tesla shows a real-time in-car visualization. Our renderer follows a fixed camera 9.2 m behind and 4.7 m above the left camera on one KITTI drive. The clips use different roads and camera systems. We have no paired Tesla output or recorded overhead target for a pixel-level comparison. [Watch Tesla Reality View](https://www.youtube.com/watch?v=eNBqkc7V1nU) · [Watch our render with the synchronized front camera](neural/chase/result/sync.mp4)
 
-[![ChaseView on KITTI with the recorded front-camera view inset](media/chaseview.webp)](neural/chase/result/sync.mp4)
+[![Our chase camera on KITTI with the recorded front-camera view inset](media/kitti-chase-camera.webp)](neural/chase/result/sync.mp4)
 
 ### Where does the road texture come from?
 
@@ -83,8 +85,8 @@ Open `run-chase/sync.mp4` to inspect the rendering alongside the recorded input.
 
 [Renderer](neural/chase/render.py) · [Two-camera scene reconstruction](neural/chase/scene.py) · [Conditional diffusion](neural/chase/diffusion.py) · [Timing audit](neural/chase/result/metrics.json)
 
-## Credits and reuse
+## Copyright and attribution
 
-This independent research prototype was inspired by Tesla's Reality View presentation. It provides offline visualization of recorded footage. The repository includes the project-trained diffusion weights. Meta distributes the DINOv3 backbone separately under its own terms. [Tesla demonstration](https://www.youtube.com/watch?v=eNBqkc7V1nU) · [DINOv3](https://github.com/facebookresearch/dinov3)
-
-KITTI Raw was created by Andreas Geiger, Philip Lenz, Christoph Stiller and Raquel Urtasun, *Vision meets Robotics: The KITTI Dataset* (IJRR, 2013). The KITTI footage and KITTI-derived demo imagery, videos, and geometry in this repository are distributed under CC BY-NC-SA 3.0. Modifications include stereo reconstruction, viewpoint reprojection, learned completion and video compositing. [KITTI Raw](https://www.cvlibs.net/datasets/kitti/raw_data.php) · [Data terms](https://www.cvlibs.net/datasets/kitti/) · [CC BY-NC-SA 3.0](https://creativecommons.org/licenses/by-nc-sa/3.0/)
+- **Tesla.** The Tesla name and product names identify the system discussed here. Tesla retains its rights in its trademarks and official demonstration footage. The official video is linked at its source. This independent project has no affiliation with or endorsement from Tesla. [Tesla intellectual property information](https://www.tesla.com/legal/additional-resources#intellectual-property) · [Official demonstration](https://www.youtube.com/watch?v=eNBqkc7V1nU)
+- **KITTI.** Credit for the source footage belongs to Andreas Geiger, Philip Lenz, Christoph Stiller and Raquel Urtasun, *Vision meets Robotics: The KITTI Dataset* (IJRR, 2013). The KITTI images and derived previews, videos, point clouds and occupancy grids here are shared under CC BY-NC-SA 3.0. Reuse requires attribution, noncommercial use and the same license when sharing adaptations. Our modifications include stereo reconstruction, reprojection, learned completion and compositing. [KITTI copyright and citation](https://www.cvlibs.net/datasets/kitti/) · [License](https://creativecommons.org/licenses/by-nc-sa/3.0/)
+- **DINOv3.** The experiments use Meta's pretrained DINOv3 ViT-S/16 under the DINOv3 License. Obtain the backbone checkpoint from Meta. The small renderer and video-head checkpoints supplied here were trained for this project. [DINOv3](https://github.com/facebookresearch/dinov3) · [Meta's license](https://github.com/facebookresearch/dinov3/blob/main/LICENSE.md)

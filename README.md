@@ -33,13 +33,13 @@ The public description gives the branch connections and timing. We have no Tesla
 | Visual encoder | Frozen Meta DINOv3 ViT-S/16. The architecture experiment fuses camera and time-indexed tokens. The chase renderer projects three principal components of left-camera features onto stereo surfaces. | Pretrained features on KITTI stereo images. [Feature visualization](neural/kitti-dinov3/features.jpg) |
 | Driving and video branches | A shared feature tensor feeds an action head and an eight-frame video head. Both full-size configurations are parameter counts only. | The small interface test emitted two action values and eight RGB frames, with finite gradients. The action head is untrained. [Test record](neural/kitti-dinov3/branches.json) |
 | Virtual camera and geometry | KITTI stereo and vehicle poses place current and past road observations under a fixed chase camera. The separate occupancy baseline exports 20 cm voxels. The chase renderer consumes projected surfaces and a coverage mask directly. | We can mark the supported pixels in every chase frame. [Projection code](neural/chase/scene.py) · [Occupancy baseline](baselines/stereo/README.md) |
-| Recurrent video generation | For the chase clip, we warp the previous background into the new pose, add noise, then run five conditional DDIM steps using the geometry guide, support mask and DINO features. A procedural sedan is composited last. A separate fixed-view experiment trains a small mean-flow head. | The chase video is rendered one frame at a time offline. Its timing comes from KITTI. [Chase sampler](neural/chase/diffusion.py) · [Mean-flow experiment](neural/raised_view.py) |
+| Recurrent video generation | For the chase clip, we warp the previous background into the new pose, add noise, then run five conditional DDIM steps using the geometry guide, support mask and DINO features. A procedural Model Y is composited last. A separate fixed-view experiment trains a small mean-flow head. | The chase video is rendered one frame at a time offline. Its timing comes from KITTI. [Chase sampler](neural/chase/diffusion.py) · [Mean-flow experiment](neural/raised_view.py) |
 
 ## Chase renderer pipeline
 
 [![Stereo points and left-camera DINO features feed a pose-aligned projection. Its guide and mask condition recurrent denoising. The car is composited before timestamped export.](media/renderer-en.png)](media/renderer-en.png)
 
-All three images show the same instant. At frame 075, current or earlier stereo surfaces support **58.4%** of the background pixels. The dark gaps in the middle image show where the denoiser must rely on the RGB guide, features and history. The return arrow carries the generated background forward before the sedan is drawn. [Frame-level timing and coverage](neural/chase/result/timing.csv) · [Watch the denoising sequence](media/history-denoising.mp4)
+All three images show the same instant. At frame 075, current or earlier stereo surfaces support **58.4%** of the background pixels. The dark gaps in the middle image show where the denoiser must rely on the RGB guide, features and history. The return arrow carries the generated background forward before the Model Y is drawn. [Frame-level timing and coverage](neural/chase/result/timing.csv) · [Watch the denoising sequence](media/history-denoising.mp4)
 
 <details>
 <summary>Trace one frame through the code</summary>
@@ -60,7 +60,7 @@ All three images show the same instant. At frame 075, current or earlier stereo 
 
 [![Stereo-supported RGB, projected DINOv3 features and the final view of the same frame](media/stereo-support.webp)](media/stereo-support.mp4)
 
-Follow the lane marking as it passes under the car. Left shows the color guide only where current or earlier stereo observations support a surface. Dark gaps have no stereo support. Middle shows projected DINO feature colors. Right shows the final composite, including approximate projection and learned completion. On average, stereo supports **57.9% of background pixels** across the 68 frames. [Full comparison](media/stereo-support.mp4) · [Per-frame coverage](neural/chase/result/timing.csv)
+Follow the lane marking as it passes under the car. Left shows the color guide only where current or earlier stereo observations support a surface. Dark gaps have no stereo support. Middle shows projected DINO feature colors. Right shows the final composite, including approximate projection and learned completion. On average, stereo supports **57.8% of background pixels** across the 68 frames. [Full comparison](media/stereo-support.mp4) · [Per-frame coverage](neural/chase/result/timing.csv)
 
 ### What does the denoiser actually receive?
 
@@ -74,7 +74,13 @@ Left shows the previous generated background aligned to the current pose. Frame 
 
 This separate experiment raises the camera by 1.5 m. Left is the recorded front image, middle is the learned view and right is the stereo projection used as a reference. On the same 16 held-out frames, the ground-plane RGB warp scored **16.51 dB** and the learned view **19.57 dB** PSNR over the **58.2%** of pixels with a valid reference. These scores apply only to this fixed-view experiment. [Metrics and frame IDs](neural/kitti-raised/metrics.json)
 
+### Model Y and optional Wan repaint
+
+The main demo uses a procedural Model Y and the five-step renderer. In a separate 17-frame test, Wan2.1-VACE-1.3B repainted gaps in the projected road. The vehicle comparison uses the same Wan background in both panels. [Original sedan vs. Model Y](neural/chase/wan-result/vehicle-comparison.mp4) · [Model Y with Wan](neural/chase/wan-result/wan-model-y.mp4) · [Wan results and reproduction](neural/chase/WAN.md)
+
 ## Try it
+
+The renderer defaults to a pearl-white procedural illustration of the refreshed Tesla Model Y. Its body envelope and wheelbase follow the published dimensions. Use `--vehicle sedan` to reproduce the original silver car in the earlier previews. [Tesla dimensions](https://www.tesla.com/ownersmanual/modely/en_us/GUID-1E76B638-7B12-4D9A-8767-94B7F1E92A0E.html)
 
 **Watch without installing anything.** The full videos, trained chase renderer and per-frame timing data are in [the demo folder](neural/chase/result/).
 
@@ -107,7 +113,7 @@ Open `run-chase/sync.mp4` to inspect the rendering alongside the recorded input.
 | Virtual camera | 9.2 m behind and 4.7 m above the left camera, pitched down 27° |
 | Video | 768 × 432, variable frame timing from KITTI |
 | Synchronization | All 68 encoded timestamps matched the expected microsecond timestamps in both MP4s |
-| Inference on the development Mac | About 177 ms/frame for diffusion and composite preparation alone; geometry and encoding add latency |
+| Inference on the development Mac | About 148 ms/frame for diffusion and composite preparation alone; geometry and encoding add latency |
 | Scene fidelity | Stereo coverage is measured. There is no recorded overhead target for this clip. Occluded regions can smear or change between frames. |
 
 [Renderer](neural/chase/render.py) · [Two-camera scene reconstruction](neural/chase/scene.py) · [Conditional diffusion](neural/chase/diffusion.py) · [Timing audit](neural/chase/result/metrics.json)

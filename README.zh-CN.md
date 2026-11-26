@@ -60,7 +60,7 @@ flowchart LR
 
 [![同一帧的双目支持区域、投影后的 DINOv3 特征与最终跟车画面](media/stereo-support.webp)](media/stereo-support.mp4)
 
-沿着车道线看三栏。左栏仅在有当前或历史双目表面支持的位置显示引导图颜色，深色空隙表示缺少双目支持。中栏是投影后的 DINO 特征，颜色表示特征主成分。右栏是加入近似投影、学习补全和自车后的最终画面。68 帧中，平均 **57.9% 的背景像素**有双目表面支持。[完整对比视频](media/stereo-support.mp4) · [逐帧覆盖率](neural/chase/result/timing.csv)
+沿着车道线看三栏。左栏仅在有当前或历史双目表面支持的位置显示引导图颜色，深色空隙表示缺少双目支持。中栏是投影后的 DINO 特征，颜色表示特征主成分。右栏是加入近似投影、学习补全和自车后的最终画面。68 帧中，平均 **57.8% 的背景像素**有双目表面支持。[完整对比视频](media/stereo-support.mp4) · [逐帧覆盖率](neural/chase/result/timing.csv)
 
 ### 上一帧怎样参与下一帧去噪？
 
@@ -96,11 +96,17 @@ python neural/raised_view.py --drive 2011_09_26_drive_0001_sync.zip --calib 2011
   --load-head neural/kitti-raised/raised-flow.pth
 ```
 
+### Model Y 与 Wan 局部补画
+
+首页的完整视频使用程序化 Model Y 和五步渲染器。另取 17 帧，用 Wan2.1-VACE-1.3B 补画道路投影中的空缺。车型对比视频的两侧使用同一段 Wan 背景，便于观察车身变化。[原轿车与 Model Y 对比](neural/chase/wan-result/vehicle-comparison.mp4) · [Wan 补画版 Model Y](neural/chase/wan-result/wan-model-y.mp4) · [Wan 实测与复现](neural/chase/WAN.md)
+
 ## 复现跟车视频
+
+渲染器默认使用珍珠白色的焕新版 Tesla Model Y 程序化模型，车身轮廓尺寸和轴距参考车主手册。使用 `--vehicle sedan` 可以重放早期预览中的银色轿车。[Tesla 尺寸资料](https://www.tesla.com/ownersmanual/modely/en_us/GUID-1E76B638-7B12-4D9A-8767-94B7F1E92A0E.html)
 
 [播放跟车视角](neural/chase/result/chase.mp4) · [并排核对同刻实拍和观测范围](neural/chase/result/sync.mp4) · [逐帧时间戳](neural/chase/result/timing.csv) · [导出核验](neural/chase/result/metrics.json)
 
-虚拟镜头位于左前相机后方 9.2 米、上方 4.7 米，向下俯拍 27°。镜头刚性跟随实车的逐帧惯导位姿，银色轿车由程序绘制，作为自车位置和尺度的参照。前向相机没有拍到本车外观。
+虚拟镜头位于左前相机后方 9.2 米、上方 4.7 米，向下俯拍 27°。镜头刚性跟随实车的逐帧惯导位姿，珍珠白 Model Y 由程序绘制，作为自车位置和尺度的参照。前向相机没有拍到本车外观。
 
 为评估预训练视频渲染器，另导出同一机位的[模糊 RGB 控制视频](neural/chase/result/control-blur.mp4)，保留 68 个原始显示时刻和自车轮廓。这份文件可用于 Cosmos3-Nano-Sim-Transfer 的 blur 条件实验。第三方模型的推理质量与端到端时延尚待测试。[官方模型卡](https://huggingface.co/nvidia/Cosmos3-Nano-Sim-Transfer)
 
@@ -108,7 +114,7 @@ python neural/raised_view.py --drive 2011_09_26_drive_0001_sync.zip --calib 2011
 
 **训练和显示。** 在 0–35 号帧上训练条件去噪器，目标为双目投影得到的实拍颜色。随机挖空区域用于训练补全，历史输入在训练时由平移和模糊近似。导出 40–107 号帧时使用实际前一幅生成结果。输入仅有前向双目，历史观测能够补充近场，未曾拍到的物体或遮挡区域缺乏独立真值。同步版右下角以蓝绿色标出有当前或历史双目表面支持的像素，以橙色标出补画或近似投影，以浅灰色标出自车模型。
 
-**时序。** 两个 H.264 MP4 均使用原始相机时间戳决定每一帧的显示时刻。首帧为时间零点，容器时间基为微秒，最后一帧持续时间取片段间隔的中位数。导出后核对每个包的显示时间及末帧时长，并完整解码两份视频。播放以实车节奏呈现；开发用 Mac 的 CPU 上，扩散与全分辨率合成准备平均约 **177 毫秒/帧**，几何计算与编码另计。
+**时序。** 两个 H.264 MP4 均使用原始相机时间戳决定每一帧的显示时刻。首帧为时间零点，容器时间基为微秒，最后一帧持续时间取片段间隔的中位数。导出后核对每个包的显示时间及末帧时长，并完整解码两份视频。播放以实车节奏呈现；开发用 Mac 的 CPU 上，扩散与全分辨率合成准备平均约 **148 毫秒/帧**，几何计算与编码另计。
 
 在仓库根目录使用 Python 3.12。先从 Meta 获取 `dinov3_vits16_pretrain_lvd1689m-08c60483.pth`，将命令中的权重路径改为本地位置。KITTI 原始序列和标定包可直接以 ZIP 格式读取。[DINOv3 权重入口](https://github.com/facebookresearch/dinov3)
 

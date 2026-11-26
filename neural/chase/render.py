@@ -60,7 +60,7 @@ def render(args,cache,model):
     frames=list(range(args.start,len(stamps)))
     pts=us[frames]
     dt=np.diff(pts,append=pts[-1]+round(np.median(np.diff(pts))))
-    ego=vehicle()
+    ego=vehicle(args.vehicle)
     alpha=ego[...,3]/255.
     previous=None
     out=args.out; out.mkdir(parents=True,exist_ok=True)
@@ -96,7 +96,7 @@ def render(args,cache,model):
         encode(temp,tag,pts,dt,out/(tag+".mp4"))
     with (out/"timing.csv").open("w",newline="") as f:
         w=csv.writer(f);w.writerow(["source_frame","kitti_left_timestamp","mp4_pts_us","duration_us","stereo_supported_background_fraction"]);w.writerows(rows)
-    stats=dict(frames=len(frames),start_frame=frames[0],end_frame=frames[-1],duration_s=(pts[-1]+dt[-1]).item()/1e6,
+    stats=dict(vehicle=args.vehicle,frames=len(frames),start_frame=frames[0],end_frame=frames[-1],duration_s=(pts[-1]+dt[-1]).item()/1e6,
                max_pts_error_us=0,source_rounding_error_ns=int(abs((ns[frames]-ns[frames[0]])-1000*pts).max()),
                verification="Compared packet PTS and final duration in both exported MP4 files; fully decoded both.",
                last_duration="median inter-frame duration",mean_supported_background=float(np.mean([r[-1] for r in rows])),
@@ -111,6 +111,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     for key in ("drive","calib","checkpoint","meta-repo","cache","out"):
         p.add_argument("--"+key,type=Path,required=True)
+    p.add_argument("--vehicle",choices=("model-y","sedan"),default="model-y")
     p.add_argument("--reuse-cache",action="store_true",help="Use the precomputed geometry for this drive/rig.")
     p.add_argument("--train",action="store_true",help="Fit a new diffusion renderer on frames 0–35.")
     p.add_argument("--weights",type=Path,default=Path(__file__).parent/"result/denoiser.pth")

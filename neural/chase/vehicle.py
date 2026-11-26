@@ -1,10 +1,19 @@
-"""Procedural sedan, drawn in the same metric camera as the road."""
+"""Procedural ego vehicles in the same metric camera as the road."""
 import cv2
 import numpy as np
 from scene import project,W,H
 
 
-def vehicle():
+def vehicle(model="model-y"):
+    if model == "model-y":
+        from model_y import model_y
+        return model_y()
+    if model != "sedan":
+        raise ValueError(f"Unknown vehicle: {model}")
+    return sedan()
+
+
+def sedan():
     ground=1.65
     def point(x,z,height):
         return np.array([x,ground-height,z-.55])

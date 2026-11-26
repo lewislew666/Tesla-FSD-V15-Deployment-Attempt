@@ -1,6 +1,6 @@
-# ChaseView — Turn Real Driving Footage into a Third-Person View
+# ChaseView — Recreating the Tesla FSD V15 Reality View Experience
 
-A pair of cameras faces the road. ChaseView renders the same drive from above and behind the car, using stereo depth, vehicle motion, DINOv3 features and a small conditional diffusion model.
+An independent attempt to recreate the third-person camera experience of Tesla FSD V15 Reality View from its public technical description. ChaseView turns real KITTI stereo footage into a synchronized chase-camera video using vehicle motion, DINOv3 features and conditional diffusion.
 
 ![A virtual chase camera follows a car along a real KITTI street. The inset shows the front camera at the same moment.](media/chaseview.webp)
 

@@ -1,10 +1,10 @@
-# ChaseView · 特斯拉 FSD V15 Reality View 第三人称视角复现尝试
+# Tesla FSD V15 Reality View · ChaseView 第三人称视角独立复现尝试
 
 [English](README.md)
 
 ![KITTI 实拍与同步跟车视图](media/chaseview.webp)
 
-基于特斯拉 FSD V15 Reality View 公开技术描述的独立模拟与复现尝试，聚焦第三人称行车可视化。在公开实拍帧上验证共享视觉特征、驾驶分支和视频分支的连接方式。现已训练并附带一个小型固定抬高视角生成分支；驾驶分支仍处于接口验证阶段。[Tesla 官方演示](https://www.youtube.com/watch?v=eNBqkc7V1nU) · [技术说明原帖](https://x.com/elonmusk/status/2124458557525397780)
+Tesla FSD V15 Reality View 是 ChaseView 的灵感来源。我们尝试依据公开技术描述，用双目视觉和扩散模型从实拍行车影像重建同步的第三人称视角。在公开实拍帧上验证共享视觉特征、驾驶分支和视频分支的连接方式。现已训练并附带一个小型固定抬高视角生成分支；驾驶分支仍处于接口验证阶段。[Tesla 官方演示](https://www.youtube.com/watch?v=eNBqkc7V1nU) · [技术说明原帖](https://x.com/elonmusk/status/2124458557525397780)
 
 ## 与实拍同步的第三人称跟车视频
 

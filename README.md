@@ -1,6 +1,6 @@
-# ChaseView — Recreating the Tesla FSD V15 Reality View Experience
+# Tesla FSD V15 Reality View — An Independent Recreation Attempt with ChaseView
 
-An independent attempt to recreate the third-person camera experience of Tesla FSD V15 Reality View from its public technical description. ChaseView turns real KITTI stereo footage into a synchronized chase-camera video using vehicle motion, DINOv3 features and conditional diffusion.
+Tesla FSD V15 Reality View inspired ChaseView, an independent attempt to recreate its third-person perspective from real driving footage using stereo vision and diffusion. ChaseView turns real KITTI stereo footage into a synchronized chase-camera video using vehicle motion, DINOv3 features and conditional diffusion.
 
 ![A virtual chase camera follows a car along a real KITTI street. The inset shows the front camera at the same moment.](media/chaseview.webp)
 

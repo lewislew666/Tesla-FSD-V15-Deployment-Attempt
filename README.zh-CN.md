@@ -1,12 +1,24 @@
 # Tesla FSD V15 Deployment Attempt（Tesla FSD V15 尝试部署）
 
-[English](README.md) · [Tesla 官方演示](https://www.youtube.com/watch?v=eNBqkc7V1nU) · [本项目与 KITTI 实拍同步视频](neural/chase/result/sync.mp4)
+用 KITTI 的真实双目行车录像，把前相机刚刚驶过的路面重建到车后，再以条件扩散生成与实拍同步的第三人称跟车画面。
 
-**独立研究项目。** 本项目尝试部署的范围是 Reality View 风格的离线可视化：用独立编写的代码和公开可获取的模型处理 KITTI 行车录像。项目与 Tesla 无隶属或合作关系，未使用 Tesla FSD 软件或权重。[版权与署名](#版权与署名)
+[播放同步演示](neural/chase/result/sync.mp4) · [渲染流程图](#跟车渲染流程) · [复现视频](#复现跟车视频) · [English](README.md)
 
-车顶上方没有一台跟拍相机，屏幕里的车后路面从哪里来？Tesla 公开说明了驾驶和画面生成如何共用视觉特征。本项目用一段真实行车录像研究其中的画面生成问题，并逐帧标出合成画面里哪些位置有真实观测支持。
+[![跟车画面与同刻 KITTI 前视实拍](media/kitti-chase-camera.webp)](neural/chase/result/sync.mp4)
+
+*KITTI Raw 0001，68 帧，7.016 秒。小窗是同刻前相机实拍，主画面是固定虚拟机位的离线渲染。*
+
+本项目独立实现 Tesla Reality View 风格的可视化，与 Tesla 无隶属关系，未使用 Tesla FSD 软件或权重。[版权与署名](#版权与署名)
 
 ## Tesla FSD V15 如何生成 Reality View
+
+```mermaid
+flowchart LR
+    U["近期 UVE 特征"] --> A["驾驶模型 · 约 3B"] --> B["驾驶动作"]
+    U --> V["条件均值流 · 约 1B"] --> O["八帧 Reality View"]
+    H["上一段生成画面加噪"] --> V
+    O -.-> H
+```
 
 1. **一段视觉历史分给两个模型。** 据马斯克的技术说明，Tesla 的通用视觉编码器（UVE）提供近期的一串视觉特征。约 30 亿参数的模型据此输出驾驶动作，另一个约 10 亿参数的条件均值流模型读取同一串特征，生成屏幕画面。两条分支在视觉特征处分开，画面分支可以直接利用感知信息。[马斯克技术原帖](https://x.com/elonmusk/status/2124458557525397780)
 2. **上一段生成画面也是输入。** 画面分支给上一次的 Reality View 加噪，再以近期 UVE 特征为条件去噪，生成当前视图。这样既有上一段画面的外观参考，也能纳入新观测。Tesla 官方演示展示了虚拟相机从车身上方跟随车辆的效果。[技术原帖](https://x.com/elonmusk/status/2124458557525397780) · [Tesla 官方视频](https://www.youtube.com/watch?v=eNBqkc7V1nU)
@@ -23,11 +35,26 @@
 | 虚拟机位与三维几何 | 用 KITTI 双目和车辆位姿，把当前与历史观测投影到固定跟车机位。独立 occupancy 基线可导出 20 厘米体素；跟车渲染器直接读取投影表面与覆盖掩码。 | 每帧都能查看哪些像素有几何支持。[几何投影](neural/chase/scene.py) · [占用基线](baselines/stereo/README.md) |
 | 时序生成 | 将上一帧背景按位姿对齐并加噪，以几何引导图、覆盖掩码和 DINO 特征为条件，做五步 DDIM 更新，最后叠加程序绘制的自车。另有独立的固定抬高视角均值流实验。 | 跟车视频在本地逐帧离线生成，按 KITTI 时间戳播放。[跟车采样器](neural/chase/diffusion.py) · [均值流实验](neural/raised_view.py) |
 
+## 跟车渲染流程
+
+[![左右相机生成三维点，左相机提取 DINO 特征；位姿将二者投影到虚拟机位，去噪器结合上一帧背景更新画面，最后按时间戳合成视频](media/renderer-zh.png)](media/renderer-zh.png)
+
+图中三张图来自同一时刻。第 075 帧有 **58.4%** 的背景像素得到当前或历史双目表面的支持。中图的暗区显示几何观测的空缺。扩散分支在这些位置结合 RGB 引导、特征和历史画面进行估计。红色回路传递的是叠加自车之前的背景。[第 075 帧覆盖与时间记录](neural/chase/result/timing.csv) · [逐帧查看去噪过程](media/history-denoising.mp4)
+
+<details>
+<summary>沿代码追踪一帧数据</summary>
+
+| 从哪里来 | 传给下一步什么 | 在哪里使用 |
+| --- | --- | --- |
+| 左右相机、双目标定；左图 DINOv3 patch | 深度、实拍颜色、压到三个通道的特征 | 用车辆位姿把当前观测与最多 12 个历史关键帧投影到虚拟机位。[scene.py](neural/chase/scene.py) |
+| 投影表面与相邻相机位姿 | RGB 引导图、覆盖掩码、特征图以及用于对齐历史画面的像素坐标 | 按坐标重采样上一帧背景并加噪。首帧从引导图初始化。[diffusion.py](neural/chase/diffusion.py) |
+| 五步采样器 | 恢复表面细节的背景帧 | 保存为下一帧历史，再叠加自车。使用相机时间戳编码，并核验 MP4 显示时间。[render.py](neural/chase/render.py) · [vehicle.py](neural/chase/vehicle.py) |
+
+</details>
+
 ## 效果对比
 
 **Tesla 官方演示与 本项目的实拍重建。** 可以对照观察同一个现象：车辆向前行驶时，刚从前相机下缘消失的路面怎样出现在车旁和车后。Tesla 展示车端实时生成的上方虚拟视角；我们的渲染器在一条 KITTI 路线上使用固定机位，位于左相机后方 9.2 米、上方 4.7 米。两段视频来自不同道路和相机系统，目前没有同场景 Tesla 输出或同步俯视实拍可供逐像素评测。[播放 Tesla Reality View](https://www.youtube.com/watch?v=eNBqkc7V1nU) · [播放本项目渲染与同刻前视实拍](neural/chase/result/sync.mp4)
-
-[![跟车画面与同刻 KITTI 前视实拍](media/kitti-chase-camera.webp)](neural/chase/result/sync.mp4)
 
 ### 车后的路面有多少来自真实观测？
 
@@ -69,7 +96,7 @@ python neural/raised_view.py --drive 2011_09_26_drive_0001_sync.zip --calib 2011
   --load-head neural/kitti-raised/raised-flow.pth
 ```
 
-## 跟车视频的训练与重放
+## 复现跟车视频
 
 [播放跟车视角](neural/chase/result/chase.mp4) · [并排核对同刻实拍和观测范围](neural/chase/result/sync.mp4) · [逐帧时间戳](neural/chase/result/timing.csv) · [导出核验](neural/chase/result/metrics.json)
 
@@ -83,13 +110,27 @@ python neural/raised_view.py --drive 2011_09_26_drive_0001_sync.zip --calib 2011
 
 **时序。** 两个 H.264 MP4 均使用原始相机时间戳决定每一帧的显示时刻。首帧为时间零点，容器时间基为微秒，最后一帧持续时间取片段间隔的中位数。导出后核对每个包的显示时间及末帧时长，并完整解码两份视频。播放以实车节奏呈现；开发用 Mac 的 CPU 上，扩散与全分辨率合成准备平均约 **177 毫秒/帧**，几何计算与编码另计。
 
-复现时使用官方完整同步序列和标定压缩包。设置 DINO 权重与官方源码目录的步骤见下文。脚本默认加载项目附带的扩散权重，追加 `--train` 可重新拟合。
+在仓库根目录使用 Python 3.12。先从 Meta 获取 `dinov3_vits16_pretrain_lvd1689m-08c60483.pth`，将命令中的权重路径改为本地位置。KITTI 原始序列和标定包可直接以 ZIP 格式读取。[DINOv3 权重入口](https://github.com/facebookresearch/dinov3)
 
 ```sh
+python3 -m venv .venv
+. .venv/bin/activate
 python -m pip install -r neural/chase/requirements.txt
-python neural/chase/render.py --drive 2011_09_26_drive_0001_sync.zip --calib 2011_09_26_calib.zip \
-  --checkpoint "$weights" --meta-repo vendor/dinov3 --cache cache-chase --out run-chase
+git clone https://github.com/facebookresearch/dinov3.git vendor/dinov3
+git -C vendor/dinov3 checkout 6876159a11b4df116f30f667f8c9888617df0751
+
+mkdir -p data
+base=https://s3.eu-central-1.amazonaws.com/avg-kitti/raw_data
+curl -fL "$base/2011_09_26_drive_0001/2011_09_26_drive_0001_sync.zip" -o data/drive.zip
+curl -fL "$base/2011_09_26_calib.zip" -o data/calib.zip
+
+python neural/chase/render.py \
+  --drive data/drive.zip --calib data/calib.zip \
+  --meta-repo vendor/dinov3 --checkpoint /path/to/dinov3_vits16_pretrain_lvd1689m-08c60483.pth \
+  --cache cache-chase --out run-chase
 ```
+
+打开 `run-chase/sync.mp4` 查看同步结果。脚本默认加载随仓库发布的去噪器，追加 `--train` 可重新拟合。
 
 ## 在真实图像上复现接口检查
 

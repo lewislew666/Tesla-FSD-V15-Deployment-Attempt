@@ -1,12 +1,24 @@
 # Tesla FSD V15 Deployment Attempt
 
-[中文说明](README.zh-CN.md) · [Tesla's official demo](https://www.youtube.com/watch?v=eNBqkc7V1nU) · [Our renderer on real KITTI footage](neural/chase/result/sync.mp4)
+Reconstruct the road a car just drove over from real KITTI stereo footage, then render a synchronized chase-camera view with conditional diffusion.
 
-**Independent research project.** This deployment runs an offline recreation of the Reality View visualization on recorded KITTI footage. The implementation uses independently written code and publicly available models. The project is unaffiliated with Tesla and has no access to its FSD software or weights. [Copyright and attribution](#copyright-and-attribution)
+[Watch the synchronized demo](neural/chase/result/sync.mp4) · [Renderer diagram](#chase-renderer-pipeline) · [Reproduce the clip](#try-it) · [中文说明](README.zh-CN.md)
 
-How can a car show the road behind it from a camera that sits above its roof? Tesla described how its driving network and its Reality View renderer share visual features. This project explores the rendering side on a recorded drive, where we can trace which parts of the virtual view have support from real camera observations.
+[![Our chase camera on KITTI with the recorded front-camera view inset](media/kitti-chase-camera.webp)](neural/chase/result/sync.mp4)
+
+*KITTI Raw drive 0001 · 68 frames · 7.016 seconds. The inset is the recorded front camera. The main view is an offline render from a fixed virtual camera.*
+
+An independent research implementation inspired by Tesla Reality View, unaffiliated with Tesla. The project uses publicly available models and its own trained renderer. [Copyright and attribution](#copyright-and-attribution)
 
 ## How Tesla describes FSD V15 Reality View
+
+```mermaid
+flowchart LR
+    U["Recent UVE features"] --> A["Driving model · ~3B"] --> B["Driving actions"]
+    U --> V["Conditional mean flow · ~1B"] --> O["Eight Reality View frames"]
+    H["Noisy previous generation"] --> V
+    O -.-> H
+```
 
 1. **One visual history feeds two branches.** Tesla's Universal Vision Encoder (UVE) supplies a recent sequence of features. According to Elon Musk, a roughly 3B-parameter model uses those features to produce driving actions. A separate roughly 1B-parameter conditional mean-flow model reads the same features to render the display. The visualization branches from perception, before the action output. [Musk's technical description](https://x.com/elonmusk/status/2124458557525397780)
 2. **The renderer also reads its own previous output.** It adds noise to the previous Reality View generation, then uses the recent UVE features to denoise toward the current view. The official demo shows the resulting view from a virtual camera above the vehicle. [Technical description](https://x.com/elonmusk/status/2124458557525397780) · [Tesla video](https://www.youtube.com/watch?v=eNBqkc7V1nU)
@@ -23,11 +35,26 @@ The public description gives the branch connections and timing. We have no Tesla
 | Virtual camera and geometry | KITTI stereo and vehicle poses place current and past road observations under a fixed chase camera. The separate occupancy baseline exports 20 cm voxels. The chase renderer consumes projected surfaces and a coverage mask directly. | We can mark the supported pixels in every chase frame. [Projection code](neural/chase/scene.py) · [Occupancy baseline](baselines/stereo/README.md) |
 | Recurrent video generation | For the chase clip, we warp the previous background into the new pose, add noise, then run five conditional DDIM steps using the geometry guide, support mask and DINO features. A procedural sedan is composited last. A separate fixed-view experiment trains a small mean-flow head. | The chase video is rendered one frame at a time offline. Its timing comes from KITTI. [Chase sampler](neural/chase/diffusion.py) · [Mean-flow experiment](neural/raised_view.py) |
 
+## Chase renderer pipeline
+
+[![Stereo points and left-camera DINO features feed a pose-aligned projection. Its guide and mask condition recurrent denoising. The car is composited before timestamped export.](media/renderer-en.png)](media/renderer-en.png)
+
+All three images show the same instant. At frame 075, current or earlier stereo surfaces support **58.4%** of the background pixels. The dark gaps in the middle image show where the denoiser must rely on the RGB guide, features and history. The return arrow carries the generated background forward before the sedan is drawn. [Frame-level timing and coverage](neural/chase/result/timing.csv) · [Watch the denoising sequence](media/history-denoising.mp4)
+
+<details>
+<summary>Trace one frame through the code</summary>
+
+| Input | Passed to the next module | Consumer |
+| --- | --- | --- |
+| Calibrated stereo pair and left-image DINOv3 patches | Depth, observed color and three feature components | Vehicle poses place current observations and up to 12 historical keyframes in the chase-camera view. [scene.py](neural/chase/scene.py) |
+| Projected surfaces and adjacent camera poses | RGB guide, support mask, feature map and backward sampling coordinates | The sampler aligns the previous background and adds noise. The first frame starts from the guide. [diffusion.py](neural/chase/diffusion.py) |
+| Five-step sampler | Background with surface detail restored | Save the background for the next frame, then composite the car. Encode with camera timestamps and verify the MP4 presentation times. [render.py](neural/chase/render.py) · [vehicle.py](neural/chase/vehicle.py) |
+
+</details>
+
 ## Visual comparisons
 
 **Tesla's demonstration and the KITTI result.** Watch how the road moves beneath the elevated camera. Tesla shows a real-time in-car visualization. Our renderer follows a fixed camera 9.2 m behind and 4.7 m above the left camera on one KITTI drive. The clips use different roads and camera systems. We have no paired Tesla output or recorded overhead target for a pixel-level comparison. [Watch Tesla Reality View](https://www.youtube.com/watch?v=eNBqkc7V1nU) · [Watch our render with the synchronized front camera](neural/chase/result/sync.mp4)
-
-[![Our chase camera on KITTI with the recorded front-camera view inset](media/kitti-chase-camera.webp)](neural/chase/result/sync.mp4)
 
 ### Where does the road texture come from?
 

@@ -118,6 +118,11 @@ Open `run-chase/sync.mp4` to inspect the rendering alongside the recorded input.
 
 [Renderer](neural/chase/render.py) · [Two-camera scene reconstruction](neural/chase/scene.py) · [Conditional diffusion](neural/chase/diffusion.py) · [Timing audit](neural/chase/result/metrics.json)
 
+## Contributors
+
+- **[lewislew666](https://github.com/lewislew666)** maintains the project and directs the experiments.
+- **ChatGPT (OpenAI Codex)** assisted with the renderer implementation, Wan VACE integration, timestamp verification and bilingual documentation.
+
 ## Copyright and attribution
 
 - **Tesla.** The Tesla name and product names identify the system discussed here. Tesla retains its rights in its trademarks and official demonstration footage. The official video is linked at its source. This independent project has no affiliation with or endorsement from Tesla. [Tesla intellectual property information](https://www.tesla.com/legal/additional-resources#intellectual-property) · [Official demonstration](https://www.youtube.com/watch?v=eNBqkc7V1nU)

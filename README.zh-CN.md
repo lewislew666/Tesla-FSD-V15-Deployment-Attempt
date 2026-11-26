@@ -185,6 +185,11 @@ python -m pip install -r requirements.txt
 python baselines/stereo/kitti.py --drive 2011_09_26_drive_0001_sync.zip --calib 2011_09_26_calib.zip --out run-kitti
 ```
 
+## 贡献者
+
+- **[lewislew666](https://github.com/lewislew666)** 负责项目维护与实验方向。
+- **ChatGPT（OpenAI Codex）** 协助实现渲染器、接入 Wan VACE、核对视频时间戳并编写中英文文档。
+
 ## 版权与署名
 
 - **Tesla。** 文中使用 Tesla 及其产品名称来指明研究对象。Tesla 保留其商标和官方演示影像的相关权利，官方视频链接指向原始发布页。本项目由研究者独立实现，未经 Tesla 背书。[Tesla 知识产权说明](https://www.tesla.com/legal/additional-resources#intellectual-property) · [官方演示](https://www.youtube.com/watch?v=eNBqkc7V1nU)
